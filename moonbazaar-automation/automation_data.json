@@ -1,0 +1,42 @@
+{
+  "totalRuns": 6,
+  "successfulRuns": 2,
+  "totalSurveysCompleted": 7,
+  "lastReportRun": 0,
+  "runHistory": [
+    {
+      "timestamp": 1788444719226,
+      "successful": false,
+      "surveysCount": 0
+    },
+    {
+      "timestamp": 1788445231808,
+      "successful": false,
+      "surveysCount": 0
+    },
+    {
+      "timestamp": 1788446063534,
+      "successful": true,
+      "surveysCount": 4
+    },
+    {
+      "timestamp": 1788448067770,
+      "successful": false,
+      "surveysCount": 0
+    },
+    {
+      "timestamp": 1788448583870,
+      "successful": false,
+      "surveysCount": 0
+    },
+    {
+      "timestamp": 1788449105080,
+      "successful": true,
+      "surveysCount": 3
+    }
+  ],
+  "cookies": {
+    "zlex_token": "",
+    "PHPSESSID": ""
+  }
+}
