@@ -1,5 +1,5 @@
 {
-  "totalRuns": 3,
+  "totalRuns": 4,
   "successfulRuns": 1,
   "totalSurveysCompleted": 4,
   "lastReportRun": 0,
@@ -18,6 +18,11 @@
       "timestamp": 1788446063534,
       "successful": true,
       "surveysCount": 4
+    },
+    {
+      "timestamp": 1788448067770,
+      "successful": false,
+      "surveysCount": 0
     }
   ],
   "cookies": {
