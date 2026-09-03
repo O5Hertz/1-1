@@ -1,76 +1,59 @@
 ```
-# Environment variables
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Environment
 .env
 .env.local
 *.env.*
 
-# Logs
-*.log
-
 # Dependencies
 node_modules/
-
-# Build outputs
+.venv/
+venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
 dist/
 build/
 target/
+.gradle/
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.py.class
-.Python
-env/
-venv/
-.venv/
-.venv.bak/
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.log
-.git/modules/
-*.sublime-workspace
-.pytest_cache/
-.mypy_cache/
-.hypothesis/
-
-# Node.js
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-node_modules/
-jspm_packages/
-web_modules/
-*.tsbuildinfo
-typings/
-
-# IDE
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
+
+# System files
 .DS_Store
 Thumbs.db
 
-# Archives
+# Compiled files
+*.pyc
+*.class
+*.o
+*.exe
+*.dll
+*.so
+*.a
+*.obj
+*.out
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Compressed files
 *.zip
-*.tar.gz
-*.tar.bz2
-*.tar.xz
-*.7z
-*.rar
 *.gz
+*.tar
+*.tgz
 *.bz2
 *.xz
+*.7z
+*.rar
 *.zst
 *.lz4
 *.lzh
@@ -81,13 +64,8 @@ Thumbs.db
 *.Z
 *.lz
 *.lzo
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```

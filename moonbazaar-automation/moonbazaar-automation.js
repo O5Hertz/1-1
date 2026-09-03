@@ -12,6 +12,7 @@
  * 使用前请确保：
  * 1. Node.js 环境已安装
  * 2. 环境变量 WEIXIN_TUISONG 已配置 Server 酱 SendKey
+ * 3. Cookie 已更新为有效值（可能需要从浏览器开发者工具获取最新会话）
  */
 
 const https = require('https');
@@ -25,7 +26,30 @@ const CONFIG = {
     TARGET_SUCCESS_COUNT: 8,
     SURVEYS_PER_RUN: 10,
     HIGH_VALUE_THRESHOLD: 0.5,
-    DATA_FILE: path.join(__dirname, 'automation_data.json')
+    DATA_FILE: path.join(__dirname, 'automation_data.json'),
+    
+    // 新增：更多可能的 API 端点
+    API_ENDPOINTS: [
+        '/home/providers.php',
+        '/api/v1/offers',
+        '/api/offers',
+        '/offers/list',
+        '/surveys',
+        '/dashboard/offers',
+        '/index.php?route=api/offers'
+    ],
+    
+    // 新增：更完整的请求头
+    DEFAULT_HEADERS: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/html, */*',
+        'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+    }
 };
 
 class DataStore {
@@ -129,12 +153,100 @@ class AIService {
 }
 
 class MoonBazaarService {
-    constructor(cookie, aiService) { this.baseUrl = CONFIG.BASE_URL; this.cookie = cookie; this.aiService = aiService; }
-    async checkConnection() { try { const res = await HttpClient.get(this.baseUrl, { 'Cookie': this.cookie, 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }); return res.statusCode === 200; } catch (e) { console.error('连接检查失败:', e.message); return false; } }
-    async getSurveys() { try { const res = await HttpClient.get(`${this.baseUrl}/live-dynamics`, { 'Cookie': this.cookie, 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36', 'Accept': 'application/json' }); if (res.statusCode === 200) { const data = JSON.parse(res.data); if (data.providers && Array.isArray(data.providers)) { return data.providers.map(p => ({ id: p.id || p.name, title: `${p.name} Survey`, provider: p.name, reward: parseFloat(p.reward) || parseFloat(p.points) || 0, lastActive: p.lastActive || 'unknown' })).filter(s => s.id && s.title); } } } catch (e) { console.error('获取问卷列表失败:', e.message); } return []; }
-    filterHighValueSurveys(surveys, count = CONFIG.SURVEYS_PER_RUN) { return surveys.filter(s => s.reward >= CONFIG.HIGH_VALUE_THRESHOLD).sort((a, b) => b.reward - a.reward).slice(0, count); }
-    async submitSurvey(survey, answers) { try { console.log('  模拟提交问卷...'); await this.sleep(1000 + Math.random() * 2000); console.log(`  模拟提交问卷：${survey.title}`); return true; } catch (e) { console.error(`提交问卷 ${survey.title} 失败:`, e.message); return false; } }
-    sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    constructor(cookie, aiService) {
+        this.baseUrl = CONFIG.BASE_URL;
+        this.cookie = cookie;
+        this.aiService = aiService;
+    }
+    
+    async checkConnection() {
+        try {
+            const res = await HttpClient.get(this.baseUrl, {
+                'Cookie': this.cookie,
+                'User-Agent': CONFIG.DEFAULT_HEADERS['User-Agent']
+            });
+            return res.statusCode === 200 && !res.data.includes('Access Denied');
+        } catch (e) {
+            console.error('连接检查失败:', e.message);
+            return false;
+        }
+    }
+    
+    async getSurveys() {
+        try {
+            // 从实时动态流中获取活跃的提供商
+            const response = await HttpClient.get(`${this.baseUrl}/home/get_live_feed.php?limit=50&offset=0`, {
+                'Cookie': this.cookie,
+                'User-Agent': CONFIG.DEFAULT_HEADERS['User-Agent'],
+                'Accept': 'application/json'
+            });
+            
+            if (response.statusCode === 200 && response.data) {
+                const data = JSON.parse(response.data);
+                if (Array.isArray(data)) {
+                    // 去重并统计每个提供商的出现次数和奖励
+                    const providerMap = new Map();
+                    
+                    for (const item of data) {
+                        const source = item.source || '';
+                        const reward = parseFloat(item.robux_val) || 0;
+                        
+                        // 跳过负值（表示扣除）和无效数据
+                        if (reward <= 0 || !source.trim()) continue;
+                        
+                        if (!providerMap.has(source)) {
+                            providerMap.set(source, { count: 0, totalReward: 0, maxReward: 0 });
+                        }
+                        
+                        const stats = providerMap.get(source);
+                        stats.count++;
+                        stats.totalReward += reward;
+                        stats.maxReward = Math.max(stats.maxReward, reward);
+                    }
+                    
+                    // 转换为问卷列表
+                    const surveys = [];
+                    for (const [provider, stats] of providerMap) {
+                        surveys.push({
+                            id: provider.replace(/\s+/g, '_').toLowerCase(),
+                            title: `${provider} Survey`,
+                            provider: provider,
+                            reward: stats.maxReward,
+                            avgReward: stats.totalReward / stats.count,
+                            frequency: stats.count
+                        });
+                    }
+                    
+                    // 按最高奖励排序
+                    return surveys.sort((a, b) => b.maxReward - a.maxReward);
+                }
+            }
+        } catch (e) {
+            console.error('获取问卷列表失败:', e.message);
+        }
+        
+        return [];
+    }
+    
+    filterHighValueSurveys(surveys, count = CONFIG.SURVEYS_PER_RUN) {
+        return surveys.filter(s => s.reward >= CONFIG.HIGH_VALUE_THRESHOLD).sort((a, b) => b.reward - a.reward).slice(0, count);
+    }
+    
+    async submitSurvey(survey, answers) {
+        try {
+            console.log('  模拟提交问卷...');
+            await this.sleep(1000 + Math.random() * 2000);
+            console.log(`  模拟提交问卷：${survey.title}`);
+            return true;
+        } catch (e) {
+            console.error(`提交问卷 ${survey.title} 失败:`, e.message);
+            return false;
+        }
+    }
+    
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 }
 
 class PushService {

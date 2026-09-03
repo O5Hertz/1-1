@@ -1,7 +1,7 @@
 {
-  "totalRuns": 5,
-  "successfulRuns": 1,
-  "totalSurveysCompleted": 4,
+  "totalRuns": 6,
+  "successfulRuns": 2,
+  "totalSurveysCompleted": 7,
   "lastReportRun": 0,
   "runHistory": [
     {
@@ -28,6 +28,11 @@
       "timestamp": 1788448583870,
       "successful": false,
       "surveysCount": 0
+    },
+    {
+      "timestamp": 1788449105080,
+      "successful": true,
+      "surveysCount": 3
     }
   ],
   "cookies": {
