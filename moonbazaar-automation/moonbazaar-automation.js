@@ -56,8 +56,9 @@ class HttpClient {
 
 class AIService {
     constructor() {
+        // 使用无需认证的公开 API 和本地备用
         this.apis = [
-            { name: 'HuggingFace-Phi3', url: 'https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct/v1/chat/completions', needAuth: true, timeout: 15000 },
+            { name: 'Pollinations-Text', url: 'https://text.pollinations.ai/', needAuth: false, timeout: 10000, isRawText: true },
             { name: 'LocalFallback', isLocal: true }
         ];
         this.currentIndex = 0;
@@ -65,23 +66,46 @@ class AIService {
 
     async chat(prompt, systemPrompt = '') {
         const fullPrompt = systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt;
+        
         for (let i = 0; i < this.apis.length; i++) {
             const api = this.apis[(this.currentIndex + i) % this.apis.length];
+            
             if (api.isLocal) {
                 console.log('    使用本地智能备用答案生成');
                 return this.generateSmartBackup(prompt);
             }
+            
             try {
                 console.log(`    尝试 AI 服务：${api.name} (超时:${api.timeout}ms)`);
-                const headers = { 'Content-Type': 'application/json' };
-                const body = { model: 'microsoft/Phi-3-mini-4k-instruct', messages: [{ role: 'system', content: '你是专业的问卷调查助手，生成真实可信、前后一致的答案。' }, { role: 'user', content: fullPrompt }], max_tokens: 300, temperature: 0.7 };
-                const res = await HttpClient.request(api.url, { method: 'POST', headers: headers, body: body, timeout: api.timeout });
-                if (res.statusCode === 200) {
-                    try { const json = JSON.parse(res.data); const result = json.choices?.[0]?.message?.content; if (result && result.trim().length > 10) { console.log(`    ${api.name} 响应成功`); this.currentIndex = (this.currentIndex + i) % this.apis.length; return result; } } catch (e) {}
+                
+                let res;
+                if (api.isRawText) {
+                    // Pollinations 直接接受文本并返回文本
+                    const headers = { 'Content-Type': 'text/plain' };
+                    res = await HttpClient.request(api.url, { 
+                        method: 'POST', 
+                        headers: headers, 
+                        body: fullPrompt.substring(0, 500), 
+                        timeout: api.timeout 
+                    });
+                } else {
+                    const headers = { 'Content-Type': 'application/json' };
+                    const body = { messages: [{ role: 'user', content: fullPrompt }], max_tokens: 300 };
+                    res = await HttpClient.request(api.url, { method: 'POST', headers: headers, body: body, timeout: api.timeout });
                 }
+                
+                if (res.statusCode === 200 && res.data && res.data.trim().length > 10) {
+                    console.log(`    ${api.name} 响应成功`);
+                    this.currentIndex = (this.currentIndex + i) % this.apis.length;
+                    return res.data.trim();
+                }
+                
                 console.log(`    ${api.name} 无有效响应 (status:${res.statusCode})`);
-            } catch (e) { console.log(`    ${api.name} 请求失败：${e.message}`); }
+            } catch (e) { 
+                console.log(`    ${api.name} 请求失败：${e.message}`); 
+            }
         }
+        
         console.log('    所有 AI 服务不可用，切换到本地备用模式');
         return this.generateSmartBackup(prompt);
     }

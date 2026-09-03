@@ -1,5 +1,5 @@
 {
-  "totalRuns": 4,
+  "totalRuns": 5,
   "successfulRuns": 1,
   "totalSurveysCompleted": 4,
   "lastReportRun": 0,
@@ -21,6 +21,11 @@
     },
     {
       "timestamp": 1788448067770,
+      "successful": false,
+      "surveysCount": 0
+    },
+    {
+      "timestamp": 1788448583870,
       "successful": false,
       "surveysCount": 0
     }
